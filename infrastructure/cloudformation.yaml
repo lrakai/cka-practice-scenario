@@ -14,19 +14,7 @@
 
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description:
-  "QS(5042) Kubernetes AWS CloudFormation Template: Create a Kubernetes
-  cluster in a new VPC. The master node is an auto-recovering Amazon EC2
-  instance. 1-20 additional EC2 instances in an AutoScalingGroup join the
-  Kubernetes cluster as nodes. An ELB provides configurable external access
-  to the Kubernetes API. The new VPC includes a bastion host to grant
-  SSH access to the private subnet for the cluster. This template creates
-  two stacks: one for the new VPC and one for the cluster. The stack is
-  suitable for development and small single-team clusters. **WARNING** This
-  template creates four Amazon EC2 instances with default settings. You will
-  be billed for the AWS resources used if you create a stack from this template.
-  **SUPPORT** Please visit https://github.com/heptio/aws-quickstart/blob/master/troubleshooting.md for support.
-  **NEXT STEPS** Please visit https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md."
+Description: ""
 
 # The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
@@ -578,7 +566,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase
       letters, uppercase letters, hyphens (-), and forward slash (/).
-    Default: k8s-quickstart-vmware/
+    Default: k8s-lab-challenge/
     Description:
       Only change this if you have set up assets in an S3 bucket, as explained
       in the S3 Bucket parameter. S3 key prefix for the Quick Start assets.
@@ -821,6 +809,7 @@ Resources:
             - ssmmessages:OpenControlChannel
             - ssmmessages:OpenDataChannel
             - s3:GetEncryptionConfiguration
+            - ec2messages:*
             Resource: "*"
 
   # Resource that creates the Bastion IAM role

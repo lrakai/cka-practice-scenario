@@ -813,6 +813,15 @@ Resources:
             - s3:Get*
             - s3:List*
             Resource: "*"
+          - Effect: Allow
+            Action:
+            - ssm:UpdateInstanceInformation
+            - ssmmessages:CreateControlChannel
+            - ssmmessages:CreateDataChannel
+            - ssmmessages:OpenControlChannel
+            - ssmmessages:OpenDataChannel
+            - s3:GetEncryptionConfiguration
+            Resource: "*"
 
   # Resource that creates the Bastion IAM role
   BastionInstanceProfile:

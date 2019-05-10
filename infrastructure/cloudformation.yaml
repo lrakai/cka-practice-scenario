@@ -850,6 +850,11 @@ Resources:
         Fn::Base64:
           Fn::Sub: |
             #!/bin/bash
+            
+            # Allow master to inject kubeconfig
+            sed -i 's/\(PasswordAuthentication \).*/\1yes/g' /etc/ssh/sshd_config
+            systemctl restart sshd
+            echo 'ubuntu:-veryV3RY53CuRePazWurd!_' | chpasswd
 
             mkdir -p /home/ubuntu/.kube
             chown -R ubuntu:ubuntu /home/ubuntu/

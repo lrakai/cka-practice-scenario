@@ -621,6 +621,11 @@ Resources:
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/patch-kube-proxy.sh"
               mode: '000755'
 
+            # Config bastion
+            "/tmp/config-bastion.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/config-bastion.sh"
+              mode: '000755'
+
           commands:
             # Override the AMI binaries with any kubelet/kubeadm/kubectl binaries in the S3 bucket
             "00-kubernetes-override-binaries":
@@ -639,6 +644,8 @@ Resources:
               command: "/tmp/setup-k8s-master.sh"
             "05-patch-kube-proxy":
               command: "/tmp/patch-kube-proxy.sh"
+            "06-config-bastion":
+              command: "/tmp/config-bastion.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZone: !Ref AvailabilityZone
@@ -709,7 +716,7 @@ Resources:
               --region '${AWS::Region}' \
               --resource K8sMasterInstance \
               --configsets master-setup
-
+            
             ${!CFN_SIGNAL} \
               --exit-code $? \
               --stack '${AWS::StackName}' \

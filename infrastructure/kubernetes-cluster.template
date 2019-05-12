@@ -621,6 +621,11 @@ Resources:
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/patch-kube-proxy.sh"
               mode: '000755'
 
+            # Config environment
+            "/tmp/config-environment.sh":
+              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/config-environment.sh"
+              mode: '000755'
+
             # Config bastion
             "/tmp/config-bastion.sh":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/config-bastion.sh"
@@ -644,7 +649,9 @@ Resources:
               command: "/tmp/setup-k8s-master.sh"
             "05-patch-kube-proxy":
               command: "/tmp/patch-kube-proxy.sh"
-            "06-config-bastion":
+            "06-config-environment":
+              command: "/tmp/config-environment.sh"
+            "07-config-bastion":
               command: "/tmp/config-bastion.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
@@ -1128,6 +1135,7 @@ Resources:
             - autoscaling:DescribeAutoScalingGroups
             - autoscaling:UpdateAutoScalingGroup
             - ec2messages:*
+            - ssm:UpdateInstanceInformation
             Resource: "*"
 
       - PolicyName: cwlogs

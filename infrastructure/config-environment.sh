@@ -47,3 +47,4 @@ sed "s/{{name}}/$name/g;s/{{load}}/$load/g;s/{{cpu}}/$cpu/g" /tmp/stng | kubectl
 kubectl --kubeconfig=/home/ubuntu/.kube/config run -n zz8 --generator=run-pod/v1 --image=lrakai/tetris:1.0.0 afn8s-sh7ez70b-uy6eb >> $log_file 2>&1
 
 # Check 4 - Secret
+kubectl --kubeconfig=/home/ubuntu/.kube/config create namespace sjq >> $log_file 2>&1

@@ -12,7 +12,19 @@ kubectl --kubeconfig=/home/ubuntu/.kube/config create namespace cal >> $log_file
 
 # Check 3 - Highest CPU pod in namespace
 wget -qO /tmp/metrics-server.zip https://github.com/cloudacademy/metrics-server/archive/master.zip >> $log_file 2>&1
-sudo apt install unzip && \
+
+# stop any auto-update that can block apt install
+systemctl stop apt-daily.service
+systemctl kill --kill-who=all apt-daily.service
+
+# wait until `apt-get updated` has been killed
+while ! (systemctl list-units --all apt-daily.service | egrep -q '(dead|failed)')
+do
+  sleep 1;
+done
+pkill /usr/lib/apt/apt.systemd.daily
+
+sudo apt install zip && \
   unzip -q -d /tmp /tmp/metrics-server.zip && \
   kubectl --kubeconfig=/home/ubuntu/.kube/config create -f /tmp/metrics-server-master/deploy/1.8+/ >> $log_file 2>&1
 

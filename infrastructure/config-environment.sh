@@ -24,7 +24,7 @@ do
 done
 pkill /usr/lib/apt/apt.systemd.daily
 
-sudo apt install zip && \
+sudo apt install -y zip && \
   unzip -q -d /tmp /tmp/metrics-server.zip && \
   kubectl --kubeconfig=/home/ubuntu/.kube/config create -f /tmp/metrics-server-master/deploy/1.8+/ >> $log_file 2>&1
 

@@ -711,24 +711,15 @@ Resources:
       UserData:
         Fn::Base64:
           Fn::Sub: |
-            #!/bin/bash
-            set -o xtrace
-
-            CFN_INIT=$(which cfn-init)
-            CFN_SIGNAL=$(which cfn-signal)
-
-            ${!CFN_INIT} \
-              --verbose \
-              --stack '${AWS::StackName}' \
-              --region '${AWS::Region}' \
-              --resource K8sMasterInstance \
-              --configsets master-setup
-            
-            ${!CFN_SIGNAL} \
-              --exit-code $? \
-              --stack '${AWS::StackName}' \
-              --region '${AWS::Region}' \
-              --resource K8sMasterInstance
+            #cloud-config
+            bootcmd:
+              - echo 'APT::Periodic::Enable "0";' > /etc/apt/apt.conf.d/10cloudinit-disable
+              - apt-get -y purge update-notifier-common ubuntu-release-upgrader-core landscape-common unattended-upgrades
+              - echo "Removed APT and Ubuntu 18.04 garbage early" | systemd-cat
+            runcmd:
+              - /usr/local/bin/cfn-init --verbose --stack '${AWS::StackName}' --region '${AWS::Region}' --resource K8sMasterInstance --configsets master-setup
+              - /usr/local/bin/cfn-signal --exit-code $? --stack '${AWS::StackName}' --region '${AWS::Region}' --resource K8sMasterInstance
+              
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M

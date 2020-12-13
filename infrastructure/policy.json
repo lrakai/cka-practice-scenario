@@ -25,45 +25,13 @@
         },
         {
             "Effect": "Allow",
-            "Action": [
-                "ssm:StartSession"
-            ],
-            "Resource": [
-                "arn:aws:ec2:*:*:instance/*"
-            ],
+            "Action": "ec2-instance-connect:SendSSHPublicKey",
+            "Resource": "arn:aws:ec2:us-west-2:*:instance/*",
             "Condition": {
-                "StringLike": {
-                    "ssm:resourceTag/Name": [
-                        "bastion*"
-                    ]
+                "StringEquals": {
+                    "ec2:osuser": "ubuntu"
                 }
             }
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ssm:DescribeSessions",
-                "ssm:GetConnectionStatus",
-                "ssm:DescribeInstanceProperties",
-                "ec2:DescribeInstances"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ssm:GetDocument"
-            ],
-            "Resource": "arn:aws:ssm:us-west-2:*:document/SSM-SessionManagerRunShell"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ssm:TerminateSession"
-            ],
-            "Resource": [
-                "arn:aws:ssm:*:*:session/${aws:username}-*"
-            ]
         },
 		{
 			"Effect": "Allow",

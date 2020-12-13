@@ -14,7 +14,18 @@
 
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ''
+Description: 'QS(5042) Kubernetes AWS CloudFormation Template: Create a Kubernetes
+  cluster in an existing VPC. This template is for users who want to add
+  a Kubernetes cluster to existing AWS infrastructure. The master node is
+  an auto-recovering Amazon EC2 instance with additional EC2 instances in an
+  AutoScalingGroup as nodes. An ELB provides configurable external access to the
+  Kubernetes API. If you choose a private subnet, make sure it has a bastion host
+  for SSH access to your cluster. If you choose a public subnet, you can connect
+  directly to the master node. The stack is suitable for development and small
+  single-team clusters. **WARNING** This template creates four Amazon EC2 instances
+  with default settings. You will be billed for the AWS resources.
+  **SUPPORT** Please visit https://github.com/heptio/aws-quickstart/blob/master/troubleshooting.md for support.
+  **NEXT STEPS** Please visit https://github.com/heptio/aws-quickstart/blob/master/docs/next-steps.md.'
 
 # The Metadata tells AWS how to display the parameters during stack creation
 Metadata:
@@ -132,9 +143,10 @@ Parameters:
   InstanceType:
     Description: EC2 instance type for the cluster.
     Type: String
-    Default: t3.micro
+    Default: t3.small
     AllowedValues:
     - t3.micro
+    - t3.small
     - c4.2xlarge
     - c4.4xlarge
     - c4.8xlarge
@@ -523,7 +535,7 @@ Mappings:
     us-west-1:
       '64': ami-0ece97a717eed7f2d
     us-west-2:
-      '64': ami-0ef77d0b02cb5e409
+      '64': ami-0d3da658315c52f50
     us-east-1:
       '64': ami-0d4f0ff8fb87a039c
 # Helper Conditions which help find the right values for resources
@@ -570,13 +582,6 @@ Resources:
           master-setup: master-setup
         master-setup:
           files:
-            # Script that will allow for development kubernetes binaries to replace the pre-packaged AMI binaries.
-            "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
-              mode: '000755'
-              context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
-
             # Configuration file for the cloudwatch agent. The file is a Mustache template, and we're creating it with
             # the below context (mainly to substitute in the AWS Stack Name for the logging group.)
             "/tmp/kubernetes-awslogs.conf":
@@ -632,27 +637,23 @@ Resources:
               mode: '000755'
 
           commands:
-            # Override the AMI binaries with any kubelet/kubeadm/kubectl binaries in the S3 bucket
-            "00-kubernetes-override-binaries":
-              command: "/tmp/kubernetes-override-binaries.sh"
             # Install the Cloudwatch agent with configuration for the current region and log group name
-            "01-cloudwatch-agent-setup":
+            "00-cloudwatch-agent-setup":
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
             # Enable the Cloudwatch service and launch it
-            "02-cloudwatch-service-config":
+            "01-cloudwatch-service-config":
               command: "systemctl enable awslogs.service && systemctl start awslogs.service"
             # Setup kubelet hostname
-            "03-setup-kubelet-hostname":
+            "02-setup-kubelet-hostname":
               command: "/tmp/setup-kubelet-hostname.sh"
             # Run the master setup
-            "04-master-setup":
+            "03-master-setup":
               command: "/tmp/setup-k8s-master.sh"
-            "05-patch-kube-proxy":
+            "04-patch-kube-proxy":
               command: "/tmp/patch-kube-proxy.sh"
-            "06-config-environment":
+            # Prepare challenge
+            "05-prepare-challenge":
               command: "/tmp/config-environment.sh"
-            "07-config-bastion":
-              command: "/tmp/config-bastion.sh"
     Properties:
       # Where the EC2 instance gets deployed geographically
       AvailabilityZone: !Ref AvailabilityZone
@@ -667,6 +668,7 @@ Resources:
       NetworkInterfaces:
       - DeleteOnTermination: true
         DeviceIndex: 0
+        PrivateIpAddress: 10.0.0.100
         SubnetId: !Ref ClusterSubnetId
         # Joins the ClusterSecGroup Security Group for cluster communication and SSH access
         # The ClusterSecGroupCrossTalk rules allow all instances in the same stack to communicate internally
@@ -717,9 +719,12 @@ Resources:
               - apt-get -y purge update-notifier-common ubuntu-release-upgrader-core landscape-common unattended-upgrades
               - echo "Removed APT and Ubuntu 18.04 garbage early" | systemd-cat
             runcmd:
+              - systemctl disable --now apt-daily.timer
+              - systemctl disable --now apt-daily-upgrade.timer
               - /usr/local/bin/cfn-init --verbose --stack '${AWS::StackName}' --region '${AWS::Region}' --resource K8sMasterInstance --configsets master-setup
               - /usr/local/bin/cfn-signal --exit-code $? --stack '${AWS::StackName}' --region '${AWS::Region}' --resource K8sMasterInstance
-              
+              - bash /tmp/config-bastion.sh
+
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M
@@ -769,7 +774,7 @@ Resources:
               cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
               return token
       Handler: "index.handler"
-      Runtime: "python2.7"
+      Runtime: "python3.7"
       Timeout: "5"
       Role: !GetAtt LambdaExecutionRole.Arn
 
@@ -871,11 +876,6 @@ Resources:
         node-setup:
           # (See comments in the master instance Metadata for details.)
           files:
-            "/tmp/kubernetes-override-binaries.sh":
-              source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-override-binaries.sh.in"
-              mode: '000755'
-              context:
-                BaseBinaryUrl: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}bin/"
             "/tmp/kubernetes-awslogs.conf":
               source: !Sub "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/kubernetes-awslogs.conf"
               context:
@@ -897,8 +897,6 @@ Resources:
                 ClusterInfoBucket: !Ref ClusterInfoBucket
 
           commands:
-            "00-kubernetes-override-binaries":
-              command: "/tmp/kubernetes-override-binaries.sh"
             "01-cloudwatch-agent-setup":
               command: !Sub "python /usr/local/aws/awslogs-agent-setup.py -n -r ${AWS::Region} -c /tmp/kubernetes-awslogs.conf"
             "02-cloudwatch-service-config":
@@ -936,21 +934,16 @@ Resources:
       UserData:
         Fn::Base64:
           Fn::Sub: |
-            #!/bin/bash
-            set -o xtrace
-
-            /usr/local/bin/cfn-init \
-              --verbose \
-              --stack '${AWS::StackName}' \
-              --region '${AWS::Region}' \
-              --resource LaunchConfig \
-              --configsets node-setup
-
-            /usr/local/bin/cfn-signal \
-              --exit-code $? \
-              --stack '${AWS::StackName}' \
-              --region '${AWS::Region}' \
-              --resource K8sNodeGroup
+            #cloud-config
+            bootcmd:
+              - echo 'APT::Periodic::Enable "0";' > /etc/apt/apt.conf.d/10cloudinit-disable
+              - apt-get -y purge update-notifier-common ubuntu-release-upgrader-core landscape-common unattended-upgrades
+              - echo "Removed APT and Ubuntu 18.04 garbage early" | systemd-cat
+            runcmd:
+              - systemctl disable --now apt-daily.timer
+              - systemctl disable --now apt-daily-upgrade.timer
+              - /usr/local/bin/cfn-init --verbose --stack '${AWS::StackName}' --region '${AWS::Region}' --resource LaunchConfig --configsets node-setup
+              - /usr/local/bin/cfn-signal --exit-code $? --stack '${AWS::StackName}' --region '${AWS::Region}' --resource K8sNodeGroup
 
   # Define the (one) security group for all machines in the cluster.  Keeping
   # just one security group helps with k8s's cloud-provider=aws integration so
@@ -1003,6 +996,19 @@ Resources:
       IpProtocol: tcp
       FromPort: '22'
       ToPort: '22'
+      CidrIp: !Ref SSHLocation
+
+  # - Open up NodePorts to each machine
+  # The allowed locations are chosen by the user in the SSHLocation parameter
+  ClusterSecGroupAllowNodePort:
+    Metadata:
+      Comment: Open up port NodePort to each machine
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ClusterSecGroup
+      IpProtocol: tcp
+      FromPort: '30000'
+      ToPort: '32767'
       CidrIp: !Ref SSHLocation
 
   # Allow the apiserver load balancer to talk to the cluster on port 6443

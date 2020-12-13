@@ -1,5 +1,5 @@
 # Check deployment
-kubectl --kubeconfig=/home/ubuntu/.kube/config get -n cal deployments chk1 -o yaml --export > /tmp/check_deployment ;
+kubectl --kubeconfig=/home/ubuntu/.kube/config get -n cal deployments chk1 -o yaml > /tmp/check_deployment ;
 replicas=$(grep "replicas: 3$" /tmp/check_deployment | wc -l) ;
 image=$(grep "image: nginx:1.15.12-alpine$" /tmp/check_deployment | wc -l) ;
 revisionHistory=$(grep "revisionHistoryLimit: 50$" /tmp/check_deployment | wc -l) ;

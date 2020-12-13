@@ -42,6 +42,15 @@
 				"cloudformation:Get*"
 			],
 			"Resource": "*"
+		},
+		{
+            "Sid": "SuppressEC2ConsoleErrors",
+			"Effect": "Allow",
+			"Action": [
+				"cloudwatch:DescribeAlarms",
+				"compute-optimizer:GetEnrollmentStatus"
+			],
+			"Resource": "*"
 		}
     ]
 }
